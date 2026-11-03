@@ -2,10 +2,38 @@
 const input = document.getElementById('todo-input');
 const addBtn = document.getElementById('add-btn');
 const list = document.getElementById('todo-list');
+const clearCompletedBtn = document.getElementById('clear-completed-btn');
 
 // Load saved todos from localStorage
-const saved = localStorage.getItem('todos');
-const todos = saved ? JSON.parse(saved) : [];
+function loadTodos() {
+    const saved = localStorage.getItem('todos');
+
+    if (!saved) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(saved);
+
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed;
+    } catch (error) {
+        console.error('Failed to load saved todos:', error);
+        return [];
+    }
+}
+function createTodoId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+    }
+
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+const todos = loadTodos();
 
 // Save todos to localStorage
 function savedTodos() {
@@ -17,28 +45,30 @@ function createTodoNode(todo, index) {
     const li = document.createElement('li');
 
     // Checkbox
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = !!todo.completed;
+    // Checkbox
+const checkbox = document.createElement('input');
+
+checkbox.type = 'checkbox';
+checkbox.checked = !!todo.completed;
+
+checkbox.setAttribute(
+    'aria-label',
+    `Mark "${todo.text}" as completed`
+);
 
     // Task text
     const textSpan = document.createElement('span');
+    textSpan.className = 'todo-text';
     textSpan.textContent = todo.text;
-    textSpan.style.margin = '0 8px';
-    textSpan.style.textDecoration =
-        todo.completed ? 'line-through' : '';
 
     checkbox.addEventListener('change', () => {
         todo.completed = checkbox.checked;
-
-        textSpan.style.textDecoration =
-            todo.completed ? 'line-through' : '';
-
         savedTodos();
     });
 
     // Edit button
     const editBtn = document.createElement('button');
+    editBtn.className = 'edit-btn';
     editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
     editBtn.setAttribute('aria-label', 'Edit task');
     editBtn.title = 'Edit task';
@@ -62,6 +92,7 @@ function createTodoNode(todo, index) {
 
     // Delete button
     const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
     delBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
     delBtn.setAttribute('aria-label', 'Delete task');
     delBtn.title = 'Delete task';
@@ -99,16 +130,30 @@ function addTodo() {
         return;
     }
 
-    todos.push({
-        id: crypto.randomUUID(),
+    const todo = {
+        id: createTodoId(),
         text: text,
         completed: false
-    });
+    };
+
+    todos.push(todo);
 
     input.value = '';
     render();
     savedTodos();
 }
+
+function clearCompletedTodos() {
+    const remainingTodos = todos.filter(todo => !todo.completed);
+
+    todos.length = 0;
+    todos.push(...remainingTodos);
+
+    render();
+    savedTodos();
+}
+
+clearCompletedBtn.addEventListener('click', clearCompletedTodos);
 
 // Add button click
 addBtn.addEventListener('click', addTodo);
